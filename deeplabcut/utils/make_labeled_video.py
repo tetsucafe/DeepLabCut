@@ -757,6 +757,8 @@ def create_video_with_keypoints_only(
                 segs = coords[tuple(zip(*tuple(ind_links))), :].swapaxes(0, 1)
             coll.set_segments(segs)
             imagename = dirname + '{}_{}.png'.format(vname, str(index).zfill(12))
+            fig.set_figheight(2 * ny / dpi)
+            fig.set_figwidth(2 * nx / dpi)
             plt.savefig(imagename)
             writer.grab_frame()
     plt.close(fig)
