@@ -602,6 +602,7 @@ def proc_video(
                 create_video_with_keypoints_only(
                     df,
                     videooutname,
+                    vname,
                     inds,
                     cfg["pcutoff"],
                     cfg["dotsize"],
@@ -679,11 +680,12 @@ def proc_video(
 def create_video_with_keypoints_only(
     df,
     output_name,
+    vname,
     ind_links=None,
     pcutoff=0.6,
     dotsize=8,
     alpha=0.7,
-    background_color="k",
+    background_color="white",
     skeleton_color="navy",
     color_by="bodypart",
     colormap="viridis",
@@ -694,8 +696,8 @@ def create_video_with_keypoints_only(
     bodyparts = df.columns.get_level_values("bodyparts")[::3]
     bodypart_names = bodyparts.unique()
     n_bodyparts = len(bodypart_names)
-    nx = int(np.nanmax(df.xs("x", axis=1, level="coords")))
-    ny = int(np.nanmax(df.xs("y", axis=1, level="coords")))
+    nx = 1280
+    ny = 720
 
     n_frames = df.shape[0]
     xyp = df.values.reshape((n_frames, -1, 3))
@@ -717,6 +719,9 @@ def create_video_with_keypoints_only(
     else:
         raise ValueError(f"Invalid color_by={color_by}")
 
+    dirname = "keypoint_frames/"
+    os.makedirs(dirname, exist_ok=True)
+    
     prev_backend = plt.get_backend()
     plt.switch_backend("agg")
     fig = plt.figure(frameon=False, figsize=(nx / dpi, ny / dpi))
@@ -744,13 +749,15 @@ def create_video_with_keypoints_only(
     writer = FFMpegWriter(fps=fps, codec=codec)
     with writer.saving(fig, output_name, dpi=dpi):
         writer.grab_frame()
-        for index, _ in enumerate(trange(n_frames - 1), start=1):
+        for index, _ in enumerate(trange(n_frames), start=0):
             coords = xyp[index, :, :2]
             coords[xyp[index, :, 2] < pcutoff] = np.nan
             scat.set_offsets(coords)
             if ind_links:
                 segs = coords[tuple(zip(*tuple(ind_links))), :].swapaxes(0, 1)
             coll.set_segments(segs)
+            imagename = dirname + '{}_{}.png'.format(vname, str(index).zfill(12))
+            plt.savefig(imagename)
             writer.grab_frame()
     plt.close(fig)
     plt.switch_backend(prev_backend)
